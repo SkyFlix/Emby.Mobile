@@ -34,8 +34,9 @@
 
     function getPosition(options, dlg) {
 
-        var windowHeight = window.innerHeight;
-        var windowWidth = window.innerWidth;
+        var windowSize = dom.getWindowSize();
+        var windowHeight = windowSize.innerHeight;
+        var windowWidth = windowSize.innerWidth;
 
         if (windowHeight < 540) {
             return null;
@@ -43,7 +44,10 @@
 
         var pos = getOffsets([options.positionTo])[0];
 
-        pos.top += options.positionTo.offsetHeight / 2;
+        if (options.positionY != 'top') {
+            pos.top += options.positionTo.offsetHeight / 2;
+        }
+
         pos.left += options.positionTo.offsetWidth / 2;
 
         var height = dlg.offsetHeight || 300;
@@ -63,6 +67,9 @@
         if (overflowY > 0) {
             pos.top -= (overflowY + 20);
         }
+
+        pos.top += (options.offsetTop || 0);
+        pos.left += (options.offsetLeft || 0);
 
         // Do some boundary checking
         pos.top = Math.max(pos.top, 10);
@@ -87,7 +94,9 @@
         var dialogOptions = {
             removeOnClose: true,
             enableHistory: options.enableHistory,
-            scrollY: false
+            scrollY: false,
+            entryAnimation: options.entryAnimation,
+            exitAnimation: options.exitAnimation
         };
 
         var backButton = false;
@@ -101,8 +110,8 @@
         } else {
 
             dialogOptions.modal = false;
-            dialogOptions.entryAnimationDuration = 140;
-            dialogOptions.exitAnimationDuration = 180;
+            dialogOptions.entryAnimationDuration = options.entryAnimationDuration || 140;
+            dialogOptions.exitAnimationDuration = options.exitAnimationDuration || 180;
             dialogOptions.autoFocus = false;
         }
 
@@ -112,11 +121,16 @@
             dlg.classList.add('actionsheet-fullscreen');
         }
 
-        if (!layoutManager.tv) {
+        var extraSpacing = !layoutManager.tv;
+        if (extraSpacing) {
             dlg.classList.add('actionsheet-extraSpacing');
         }
 
         dlg.classList.add('actionSheet');
+
+        if (options.dialogClass) {
+            dlg.classList.add(options.dialogClass);
+        }
 
         var html = '';
 
@@ -125,7 +139,7 @@
 
         // Admittedly a hack but right now the scrollbar is being factored into the width which is causing truncation
         if (options.items.length > 20) {
-            var minWidth = window.innerWidth >= 300 ? 240 : 200;
+            var minWidth = dom.getWindowSize().innerWidth >= 300 ? 240 : 200;
             style += "min-width:" + minWidth + "px;";
         }
 
@@ -172,6 +186,16 @@
 
         var menuItemClass = browser.noFlex || browser.firefox ? 'actionSheetMenuItem actionSheetMenuItem-noflex' : 'actionSheetMenuItem';
 
+        if (options.menuItemClass) {
+            menuItemClass += ' ' + options.menuItemClass;
+        }
+
+        var actionSheetItemTextClass = 'actionSheetItemText';
+
+        if (extraSpacing) {
+            actionSheetItemTextClass += ' actionSheetItemText-extraspacing';
+        }
+
         for (i = 0, length = options.items.length; i < length; i++) {
 
             option = options.items[i];
@@ -185,7 +209,7 @@
             else if (renderIcon && !center) {
                 html += '<i class="actionSheetItemIcon md-icon" style="visibility:hidden;">check</i>';
             }
-            html += '<div class="actionSheetItemText">' + (option.name || option.textContent || option.innerText) + '</div>';
+            html += '<div class="' + actionSheetItemTextClass + '">' + (option.name || option.textContent || option.innerText) + '</div>';
             html += '</button>';
         }
 

@@ -35,10 +35,6 @@
     z-index: -1;
 }
 
-.pageWithAbsoluteTabs neon-animatable {
-    z-index: 2;
-}
-
 .libraryPage .header {
     padding-bottom: 0;
 }
@@ -849,7 +845,6 @@ span.itemCommunityRating:not(:empty) + .userDataIcons {
     position: fixed;
     right: 0;
     bottom: 0;
-    z-index: 999;
     text-align: center;
     font-size: 90%;
     display: none;
@@ -962,10 +957,6 @@ span.itemCommunityRating:not(:empty) + .userDataIcons {
     }
 }
 
-.homeFavoritesDisabled .homeFavoritesTab {
-    display: none !important;
-}
-
 #criticReviewsContent.hiddenScrollX {
     white-space: nowrap;
 }
@@ -982,15 +973,15 @@ span.itemCommunityRating:not(:empty) + .userDataIcons {
 
 @media all and (min-width: 1000px) {
 
-    .itemDetailPage .scalableCard.portraitCard {
+    .itemDetailPage .portraitCard-scalable {
         width: 25% !important;
     }
 
-    .itemDetailPage .scalableCard.squareCard {
+    .itemDetailPage .squareCard-scalable {
         width: 25% !important;
     }
 
-    .itemDetailPage .scalableCard.backdropCard, .itemDetailPage .scalableCard.smallBackdropCard {
+    .itemDetailPage .backdropCard-scalable, .itemDetailPage .smallBackdropCard-scalable {
         width: 33.3333333333333333% !important;
     }
 
@@ -998,3 +989,11 @@ span.itemCommunityRating:not(:empty) + .userDataIcons {
         width: 16.666666666666666666666666666667% !important;
     }
 }
+
+.btnSyncComplete {
+    background: #673AB7 !important;
+}
+
+    .btnSyncComplete i {
+        border-radius: 1000px;
+    }

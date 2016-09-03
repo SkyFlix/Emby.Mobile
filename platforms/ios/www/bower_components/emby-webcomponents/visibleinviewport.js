@@ -1,1 +1,0 @@
-define([],function(){function n(n,t,i,e,r){if(i=i||0,e=e||0,!n.getBoundingClientRect)return!0;r=r||{innerHeight:window.innerHeight,innerWidth:window.innerWidth};var o=r.innerWidth,g=r.innerHeight,d=n.getBoundingClientRect(),h=d.top>=0&&d.top<g+e,u=d.bottom>0&&d.bottom<=g+e,f=d.left>=0&&d.left<o+i,c=d.right>0&&d.right<=o+i,l=t?h||u:h&&u,w=t?f||c:f&&c;return l&&w}return n});

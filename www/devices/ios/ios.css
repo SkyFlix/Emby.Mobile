@@ -23,40 +23,16 @@ body:not(.dashboardDocument) .mainDrawerButton {
     background-attachment: initial;
 }
 
-.background-theme-b .backgroundContainer:not(.withBackdrop), .dialog.background-theme-b {
-    background: #181818;
-}
-
 .viewMenuBar {
     /* It needs this in order to retain height since we're positioning the contents absolutely */
     height: 50px;
 }
 
-.libraryDocument .viewMenuBar, .libraryViewNav {
-    background-color: #000 !important;
-    box-shadow: none !important;
-}
-
-.viewMenuBar.semiTransparent {
-    background-color: #000;
-}
-
-.libraryViewNav .pageTabButton {
+.emby-tab-button {
     font-weight: 400;
-    text-transform: none;
-}
-
-.pageTabButton.is-active .pageTabButtonSelectionBar {
-    display: none !important;
-}
-
-.libraryViewNav .pageTabButton.is-active {
-    color: #52B54B !important;
-}
-
-.ui-body-b .paperList:not(.criticReviewPaperList) {
-    background-color: transparent;
-    box-shadow: none;
+    text-transform: none !important;
+    border-color: transparent !important;
+    border-width: 0 !important;
 }
 
 .criticReviewPaperList {
@@ -67,18 +43,6 @@ body:not(.dashboardDocument) .mainDrawerButton {
     display: none;
 }
 
-@media all and (max-width: 600px) {
-
-    .libraryViewNav a {
-        padding-left: 10px;
-        padding-right: 10px;
-    }
-}
-
-.btnActiveCast {
-    color: #52B54B !important;
-}
-
 .libraryViewNav {
     font-size: 12px;
 }
@@ -87,21 +51,12 @@ h1, h1 a {
     font-weight: 400 !important;
 }
 
-.btnNotificationsInner {
-    font-weight: 400;
-}
-
 .libraryMenuButtonText {
     font-weight: 500 !important;
-    position: absolute;
-    left: 100px;
-    right: 100px;
-    top: 12px;
-    text-align: center;
-    font-size: 16px;
-    margin: 0 auto !important;
-    padding: 0 !important;
-    justify-content: center;
+}
+
+.btnNotificationsInner {
+    font-weight: 400;
 }
 
 .noSecondaryNavPage .itemBackdrop {
@@ -116,32 +71,12 @@ h1, h1 a {
     font-weight: 400 !important;
 }
 
-.nowPlayingPageBackButton {
-    display: none !important;
-}
-
-.nowPlayingPage .libraryViewNav {
-    top: 0 !important;
-}
-
-.nowPlayingPage {
-    padding-top: 50px !important;
-}
-
-.localSyncStatus .labelSyncStatus {
-    display: none !important;
-}
-
 .videoSubtitles {
     font-size: 200% !important;
 }
 
 .alphabetPicker {
     right: 5px !important;
-}
-
-.searchBackButton {
-    display: none !important;
 }
 
 .txtSearch {
@@ -154,6 +89,6 @@ h1, h1 a {
     margin-right: 5%;
 }
 
-.categorySyncButton {
+.categorySyncButton, .btnSync {
     display: none !important;
 }

@@ -1,6 +1,6 @@
 .emby-button {
     position: relative;
-    display: inline-block;
+    display: inline-flex;
     align-items: center;
     box-sizing: border-box;
     margin: 0 .29em;
@@ -28,6 +28,8 @@
     overflow: hidden;
     font-weight: 500;
     text-transform: uppercase;
+    /* Disable webkit tap highlighting */
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
 }
 
     .emby-button.raised, .emby-button.fab {
@@ -89,7 +91,7 @@
         transition: box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .emby-button i + span {
+    .emby-button > i + span {
         margin-left: .5em;
     }
 
@@ -97,12 +99,12 @@
         margin-left: .5em;
     }
 
-    .emby-button.iconRight i {
+    .emby-button.iconRight > i {
         margin-left: auto;
         margin-right: .25em;
     }
 
-.emby-button-noflex.iconRight i {
+.emby-button-noflex.iconRight > i {
     position: absolute;
     right: 0;
     top: 25%;
@@ -141,9 +143,9 @@
     position: relative;
     overflow: hidden;
     font-weight: 500;
-    text-transform: uppercase;
     border-radius: 50%;
-    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    /* Disable webkit tap highlighting */
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
     justify-content: center;
 }
 
@@ -188,7 +190,7 @@
         opacity: .2;
     }
 
-.ripple-effect {
+.emby-button-ripple-effect, .paper-icon-button-light-ripple-effect {
     position: absolute;
     border-radius: 50%;
     width: 50px;
@@ -198,7 +200,7 @@
     background: currentcolor;
     animation: ripple-animation .8s;
     opacity: 0.25;
-    -webkit-transform: translate(0, 0);
+    transform-origin: center center;
     transform: translate3d(0, 0, 0);
 }
 
@@ -212,4 +214,9 @@
         transform: scale(20);
         opacity: 0;
     }
+}
+
+.emby-button-foreground {
+    position: relative;
+    z-index: 1;
 }

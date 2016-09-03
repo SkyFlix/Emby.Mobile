@@ -1,4 +1,4 @@
-﻿define(['layoutManager', 'cardBuilder', 'datetime', 'mediaInfo', 'backdrop', 'listView', 'itemContextMenu', 'itemHelper', 'userdataButtons', 'dom', 'indicators', 'scrollStyles', 'emby-itemscontainer'], function (layoutManager, cardBuilder, datetime, mediaInfo, backdrop, listView, itemContextMenu, itemHelper, userdataButtons, dom, indicators) {
+﻿define(['layoutManager', 'cardBuilder', 'datetime', 'mediaInfo', 'backdrop', 'listView', 'itemContextMenu', 'itemHelper', 'userdataButtons', 'dom', 'indicators', 'apphost', 'scrollStyles', 'emby-itemscontainer', 'emby-checkbox'], function (layoutManager, cardBuilder, datetime, mediaInfo, backdrop, listView, itemContextMenu, itemHelper, userdataButtons, dom, indicators, appHost) {
 
     var currentItem;
 
@@ -63,16 +63,35 @@
 
     function getContextMenuOptions(item, button) {
 
-        return {
+        var options = {
             item: item,
             open: false,
             play: false,
             queue: false,
             playAllFromHere: false,
             queueAllFromHere: false,
-            sync: false,
             positionTo: button
         };
+
+        if (appHost.supports('sync')) {
+            // Will be displayed via button
+            options.syncLocal = false;
+        } else {
+            // Will be displayed via button
+            options.sync = false;
+        }
+
+        return options;
+    }
+
+    function updateSyncStatus(page, item) {
+
+        var i, length;
+        var elems = page.querySelectorAll('.chkOffline');
+        for (i = 0, length = elems.length; i < length; i++) {
+
+            elems[i].checked = item.SyncPercent != null;
+        }
     }
 
     function reloadFromItem(page, params, item) {
@@ -81,12 +100,9 @@
 
         var context = params.context;
 
-        LibraryMenu.setBackButtonVisible(true);
-        LibraryMenu.setMenuButtonVisible(false);
-
         LibraryBrowser.renderName(item, page.querySelector('.itemName'), false, context);
         LibraryBrowser.renderParentName(item, page.querySelector('.parentName'), context);
-        LibraryMenu.setTitle(item.SeriesName || item.Name);
+        LibraryMenu.setTitle('');
 
         Dashboard.getCurrentUser().then(function (user) {
 
@@ -143,9 +159,17 @@
             }
 
             if (itemHelper.canSync(user, item)) {
-                hideAll(page, 'btnSync', true);
+                if (appHost.supports('sync')) {
+                    hideAll(page, 'syncLocalContainer', true);
+                    hideAll(page, 'btnSync');
+                } else {
+                    hideAll(page, 'syncLocalContainer');
+                    hideAll(page, 'btnSync', true);
+                }
+                updateSyncStatus(page, item);
             } else {
                 hideAll(page, 'btnSync');
+                hideAll(page, 'syncLocalContainer');
             }
 
             if (item.Type == 'Program' && item.TimerId) {
@@ -1022,7 +1046,7 @@
 
         _childrenItemsFunction = null;
 
-        var fields = "ItemCounts,AudioInfo,PrimaryImageAspectRatio,SyncInfo,CanDelete";
+        var fields = "ItemCounts,AudioInfo,PrimaryImageAspectRatio,BasicSyncInfo,CanDelete";
 
         var query = {
             ParentId: item.Id,
@@ -1100,7 +1124,8 @@
                     showTitle: true,
                     centerText: true,
                     lazy: true,
-                    overlayPlayButton: true
+                    overlayPlayButton: true,
+                    allowBottomPadding: !scrollX
                 });
             }
             else if (item.Type == "Season") {
@@ -1503,16 +1528,7 @@
 
             renderThemeSongs(page, themeSongs);
             renderThemeVideos(page, themeVideos);
-
-            page.dispatchEvent(new CustomEvent("thememediadownload", {
-                detail: {
-                    themeMediaResult: result
-                },
-                bubbles: true
-            }));
-
         });
-
     }
 
     function renderThemeSongs(page, items) {
@@ -1801,7 +1817,7 @@
 
             var item = items[i];
 
-            var cssClass = "card backdropCard scalableCard";
+            var cssClass = "card backdropCard scalableCard backdropCard-scalable";
 
             var href = "itemdetails.html?id=" + item.Id;
 
@@ -1828,7 +1844,7 @@
                 imgUrl = "css/images/items/detail/video.png";
             }
 
-            html += '<div class="cardPadder"></div>';
+            html += '<div class="cardPadder cardPadder-backdrop"></div>';
 
             html += '<div class="cardContent">';
             html += '<div class="cardImage lazy" data-src="' + imgUrl + '"></div>';
@@ -2022,12 +2038,41 @@
     function onSyncClick() {
         require(['syncDialog'], function (syncDialog) {
             syncDialog.showMenu({
-                items: [currentItem]
+                items: [currentItem],
+                serverId: ApiClient.serverId()
             });
         });
     }
 
     return function (view, params) {
+
+        function resetSyncStatus() {
+            updateSyncStatus(view, currentItem);
+        }
+
+        function onSyncLocalClick() {
+
+            if (this.checked) {
+                require(['syncDialog'], function (syncDialog) {
+                    syncDialog.showMenu({
+                        items: [currentItem],
+                        isLocalSync: true,
+                        serverId: ApiClient.serverId()
+
+                    }).then(function () {
+                        reload(view, params);
+                    }, resetSyncStatus);
+                });
+            } else {
+
+                require(['confirm'], function (confirm) {
+
+                    confirm(Globalize.translate('ConfirmRemoveDownload')).then(function () {
+                        ApiClient.cancelSyncItems([currentItem.Id]);
+                    }, resetSyncStatus);
+                });
+            }
+        }
 
         function onPlayTrailerClick() {
             playTrailer(view);
@@ -2083,6 +2128,11 @@
             elems[i].addEventListener('click', onSyncClick);
         }
 
+        elems = view.querySelectorAll('.chkOffline');
+        for (i = 0, length = elems.length; i < length; i++) {
+            elems[i].addEventListener('change', onSyncLocalClick);
+        }
+
         elems = view.querySelectorAll('.btnRecord,.btnFloatingRecord');
         for (i = 0, length = elems.length; i < length; i++) {
             elems[i].addEventListener('click', onRecordClick);
@@ -2126,9 +2176,14 @@
         function editImages() {
             return new Promise(function (resolve, reject) {
 
-                require(['components/imageeditor/imageeditor'], function (ImageEditor) {
+                require(['imageEditor'], function (imageEditor) {
 
-                    ImageEditor.show(currentItem.Id).then(resolve, reject);
+                    imageEditor.show({
+
+                        itemId: currentItem.Id,
+                        serverId: currentItem.ServerId
+
+                    }).then(resolve, reject);
                 });
             });
         }
@@ -2170,6 +2225,10 @@
             }
 
         }
+
+        view.querySelector('.chapterSettingsButton').addEventListener('click', function () {
+            Dashboard.navigate('librarysettings.html');
+        });
 
         view.addEventListener('viewbeforeshow', function () {
             var page = this;

@@ -1,1 +1,0 @@
-define([],function(){return{findServers:function(){return new Promise(function(n){var e=[];n(e)})}}});

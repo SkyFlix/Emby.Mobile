@@ -1,4 +1,4 @@
-﻿define(['require', 'browser', 'globalize', 'connectionManager', 'serverNotifications', 'loading', 'datetime', 'focusManager', 'imageLoader', 'events', 'layoutManager', 'itemShortcuts', 'registrationservices', 'dom', 'clearButtonStyle', 'css!./guide.css', 'material-icons', 'scrollStyles', 'emby-button'], function (require, browser, globalize, connectionManager, serverNotifications, loading, datetime, focusManager, imageLoader, events, layoutManager, itemShortcuts, registrationServices, dom) {
+﻿define(['require', 'browser', 'globalize', 'connectionManager', 'serverNotifications', 'loading', 'datetime', 'focusManager', 'imageLoader', 'events', 'layoutManager', 'itemShortcuts', 'registrationservices', 'dom', 'clearButtonStyle', 'css!./guide.css', 'material-icons', 'scrollStyles', 'emby-button', 'paper-icon-button-light'], function (require, browser, globalize, connectionManager, serverNotifications, loading, datetime, focusManager, imageLoader, events, layoutManager, itemShortcuts, registrationServices, dom) {
 
     function Guide(options) {
 
@@ -14,6 +14,8 @@
         var totalRendererdMs = msPerDay;
 
         var currentDate;
+        var currentStartIndex = 0;
+        var currentChannelLimit = 0;
 
         var channelQuery = {
 
@@ -119,7 +121,7 @@
 
             return registrationServices.validateFeature('livetv').then(function () {
 
-                var limit = browser.slow ? 100 : 400;
+                var limit = browser.slow ? 100 : 500;
 
                 context.querySelector('.guideRequiresUnlock').classList.add('hide');
 
@@ -144,10 +146,15 @@
 
             getChannelLimit(context).then(function (channelLimit) {
 
+                currentChannelLimit = channelLimit;
+
                 showLoading();
 
+                channelQuery.StartIndex = currentStartIndex;
                 channelQuery.Limit = channelLimit;
                 channelQuery.AddCurrentProgram = false;
+                channelQuery.EnableUserData = false;
+                channelQuery.EnableImageTypes = "Primary";
 
                 channelsPromise = channelsPromise || apiClient.getLiveTvChannels(channelQuery);
 
@@ -161,6 +168,25 @@
                 console.log(nextDay);
                 channelsPromise.then(function (channelsResult) {
 
+                    if (channelsResult.TotalRecordCount > channelLimit) {
+                        context.querySelector('.guidePaging').classList.remove('hide');
+
+                        if (channelQuery.StartIndex) {
+                            context.querySelector('.btnPreviousPage').disabled = false;
+                        } else {
+                            context.querySelector('.btnPreviousPage').disabled = true;
+                        }
+
+                        if ((channelQuery.StartIndex + channelLimit) < channelsResult.TotalRecordCount) {
+                            context.querySelector('.btnNextPage').disabled = false;
+                        } else {
+                            context.querySelector('.btnNextPage').disabled = true;
+                        }
+
+                    } else {
+                        context.querySelector('.guidePaging').classList.add('hide');
+                    }
+
                     apiClient.getLiveTvPrograms({
                         UserId: apiClient.getCurrentUserId(),
                         MaxStartDate: nextDay.toISOString(),
@@ -169,9 +195,11 @@
                             return c.Id;
                         }).join(','),
                         ImageTypeLimit: 1,
-                        EnableImageTypes: "Primary,Backdrop",
+                        EnableImages: false,
+                        //EnableImageTypes: layoutManager.tv ? "Primary,Backdrop" : "Primary",
                         SortBy: "StartDate",
-                        EnableTotalRecordCount: false
+                        EnableTotalRecordCount: false,
+                        EnableUserData: false
 
                     }).then(function (programsResult) {
 
@@ -266,7 +294,9 @@
                 return curr.ChannelId == channel.Id;
             });
 
-            html += '<div class="channelPrograms" data-channelid="' + channel.Id + '">';
+            var cssClass = layoutManager.tv ? 'channelPrograms channelPrograms-tv' : 'channelPrograms';
+
+            html += '<div class="' + cssClass + '" data-channelid="' + channel.Id + '">';
 
             for (var i = 0, length = programs.length; i < length; i++) {
 
@@ -379,8 +409,7 @@
             // Normally we'd want to just let responsive css handle this,
             // but since mobile browsers are often underpowered, 
             // it can help performance to get them out of the markup
-            var showIndicators = window.innerWidth >= 800;
-            showIndicators = false;
+            var showIndicators = false;
 
             var options = {
                 showHdIcon: showIndicators,
@@ -422,6 +451,10 @@
                 }
 
                 var cssClass = 'channelHeaderCell clearButton itemAction lazy';
+
+                if (layoutManager.tv) {
+                    cssClass += ' channelHeaderCell-tv';
+                }
 
                 html += '<button type="button" class="' + cssClass + '"' + dataSrc + ' data-action="link" data-isfolder="' + channel.IsFolder + '" data-id="' + channel.Id + '" data-serverid="' + channel.ServerId + '" data-type="' + channel.Type + '">';
 
@@ -707,7 +740,6 @@
         }
 
         var selectedMediaInfoTimeout;
-        var focusedElement;
         function onProgramGridFocus(e) {
 
             var programCell = parentWithClass(e.target, 'programCell');
@@ -716,25 +748,15 @@
                 return;
             }
 
-            focusedElement = e.target;
-            if (selectedMediaInfoTimeout) {
-                clearTimeout(selectedMediaInfoTimeout);
-            }
-            selectedMediaInfoTimeout = setTimeout(onSelectedMediaInfoTimeout, 700);
-        }
+            var focused = e.target;
+            var id = focused.getAttribute('data-id');
+            var item = items[id];
 
-        function onSelectedMediaInfoTimeout() {
-            var focused = focusedElement
-            if (focused && document.activeElement == focused) {
-                var id = focused.getAttribute('data-id');
-                var item = items[id];
-
-                if (item) {
-                    events.trigger(self, 'focus', [
-                    {
-                        item: item
-                    }]);
-                }
+            if (item) {
+                events.trigger(self, 'focus', [
+                {
+                    item: item
+                }]);
             }
         }
 
@@ -816,7 +838,25 @@
                 selectDate(context);
             });
 
+            context.querySelector('.btnSelectDateIcon').addEventListener('click', function () {
+                selectDate(context);
+            });
+
             context.querySelector('.btnUnlockGuide').addEventListener('click', function () {
+                currentStartIndex = 0;
+                channelsPromise = null;
+                reloadPage(context);
+            });
+
+            context.querySelector('.btnNextPage').addEventListener('click', function () {
+                currentStartIndex += currentChannelLimit;
+                channelsPromise = null;
+                reloadPage(context);
+            });
+
+            context.querySelector('.btnPreviousPage').addEventListener('click', function () {
+                currentStartIndex = Math.max(currentStartIndex - currentChannelLimit, 0);
+                channelsPromise = null;
                 reloadPage(context);
             });
 

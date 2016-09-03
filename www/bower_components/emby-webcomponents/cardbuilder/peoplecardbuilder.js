@@ -1,4 +1,4 @@
-define(['imageLoader', 'itemShortcuts', 'connectionManager'], function (imageLoader, itemShortcuts, connectionManager) {
+define(['imageLoader', 'itemShortcuts', 'connectionManager', 'layoutManager'], function (imageLoader, itemShortcuts, connectionManager, layoutManager) {
 
     function buildPeopleCardsHtml(people, options) {
 
@@ -51,7 +51,8 @@ define(['imageLoader', 'itemShortcuts', 'connectionManager'], function (imageLoa
 
     function buildPersonCard(person, apiClient, serverId, options, className) {
 
-        className += " itemAction scalableCard";
+        className += " itemAction scalableCard personCard-scalable";
+        className += " " + (options.shape || 'portrait') + 'Card-scalable';
 
         var imgUrl = getImgUrl(person, options.width, apiClient);
 
@@ -77,17 +78,23 @@ define(['imageLoader', 'itemShortcuts', 'connectionManager'], function (imageLoa
             nameHtml += '<div class="cardText cardText-secondary">&nbsp;</div>';
         }
 
+        var cardBoxCssClass = 'visualCardBox cardBox';
+
+        if (layoutManager.tv) {
+            cardBoxCssClass += ' cardBox-focustransform';
+        }
+
         var html = '\
 <button type="button" data-isfolder="' + person.IsFolder + '" data-type="' + person.Type + '" data-action="link" data-id="' + person.Id + '" data-serverid="' + serverId + '" raised class="' + className + '"> \
-<div class="visualCardBox cardBox">\
-<div class="cardScalable">\
-<div class="cardPadder"></div>\
+<div class="' + cardBoxCssClass + '">\
+<div class="cardScalable visualCardBox-cardScalable">\
+<div class="cardPadder-portrait"></div>\
 <div class="cardContent">\
 ' + cardImageContainer + '\
 </div>\
 </div>\
 </div>\
-<div class="cardFooter">\
+<div class="cardFooter visualCardBox-cardFooter">\
 ' + nameHtml + '\
 </div>\
 </div>\

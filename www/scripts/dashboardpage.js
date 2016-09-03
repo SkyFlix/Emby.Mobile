@@ -16,9 +16,22 @@
         renderNoHealthAlertsMessage(page);
     }
 
+    function onConnectionHelpClick(e) {
+
+        e.preventDefault();
+        return false;
+    }
+
     window.DashboardPage = {
 
         newsStartIndex: 0,
+
+        onPageInit: function () {
+
+            var page = this;
+
+            page.querySelector('.btnConnectionHelp').addEventListener('click', onConnectionHelpClick);
+        },
 
         onPageShow: function () {
 
@@ -28,10 +41,6 @@
 
             if (!apiClient) {
                 return;
-            }
-
-            if (Dashboard.lastSystemInfo) {
-                page.querySelector('.serverNameHeader').innerHTML = Dashboard.lastSystemInfo.ServerName;
             }
 
             DashboardPage.newsStartIndex = 0;
@@ -105,7 +114,6 @@
             ApiClient.getSystemInfo().then(function (systemInfo) {
 
                 page.querySelector('.serverNameHeader').innerHTML = systemInfo.ServerName;
-                Dashboard.updateSystemInfo(systemInfo);
 
                 $('#appVersionNumber', page).html(Globalize.translate('LabelVersionNumber').replace('{0}', systemInfo.Version));
 
@@ -309,7 +317,7 @@
 
                 var nowPlayingItem = session.NowPlayingItem;
 
-                var className = nowPlayingItem ? 'scalableCard card activeSession' : 'scalableCard card activeSession';
+                var className = nowPlayingItem ? 'scalableCard card activeSession backdropCard backdropCard-scalable' : 'scalableCard card activeSession backdropCard backdropCard-scalable';
 
                 if (session.TranscodingInfo && session.TranscodingInfo.CompletionPercentage) {
                     className += ' transcodingSession';
@@ -318,9 +326,9 @@
                 html += '<div class="' + className + '" id="' + rowId + '">';
 
                 html += '<div class="cardBox visualCardBox">';
-                html += '<div class="cardScalable">';
+                html += '<div class="cardScalable visualCardBox-cardScalable">';
 
-                html += '<div class="cardPadder"></div>';
+                html += '<div class="cardPadder cardPadder-backdrop"></div>';
                 html += '<div class="cardContent">';
 
                 html += '<div class="sessionNowPlayingContent"';
@@ -1026,7 +1034,7 @@
         }
     };
 
-    $(document).on('pageshow', "#dashboardPage", DashboardPage.onPageShow).on('pagebeforehide', "#dashboardPage", DashboardPage.onPageHide);
+    $(document).on('pageinit', "#dashboardPage", DashboardPage.onPageInit).on('pageshow', "#dashboardPage", DashboardPage.onPageShow).on('pagebeforehide', "#dashboardPage", DashboardPage.onPageHide);
 
     (function ($, document, window) {
 

@@ -14,7 +14,8 @@
                     query: {
                         StartIndex: 0,
                         EnableFavoriteSorting: true,
-                        Limit: LibraryBrowser.getDefaultPageSize()
+                        Limit: LibraryBrowser.getDefaultPageSize(),
+                        Fields: "PrimaryImageAspectRatio"
                     }
                 };
 
@@ -44,7 +45,8 @@
                 showTitle: true,
                 lazy: true,
                 cardLayout: true,
-                showDetailsMenu: true
+                showDetailsMenu: true,
+                showCurrentProgram: true
             });
         }
 

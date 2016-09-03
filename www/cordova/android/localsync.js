@@ -1,10 +1,6 @@
-﻿(function () {
+﻿define([], function () {
 
-    window.LocalSync = {
-
-        isSupported: function () {
-            return true;
-        },
+    return {
 
         sync: function () {
             AndroidSync.startSync();
@@ -15,4 +11,4 @@
         }
     };
 
-})();
+});

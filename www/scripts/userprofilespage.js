@@ -85,7 +85,7 @@
 
         var html = '';
 
-        var cssClass = "card squareCard scalableCard";
+        var cssClass = "card squareCard scalableCard squareCard-scalable";
 
         if (user.Policy.IsDisabled) {
             cssClass += ' grayscale';
@@ -94,9 +94,9 @@
         html += "<div data-userid='" + user.Id + "' class='" + cssClass + "'>";
 
         html += '<div class="cardBox visualCardBox">';
-        html += '<div class="cardScalable">';
+        html += '<div class="cardScalable visualCardBox-cardScalable">';
 
-        html += '<div class="cardPadder"></div>';
+        html += '<div class="cardPadder cardPadder-square"></div>';
 
         var href = "useredit.html?userId=" + user.Id + "";
         html += '<a class="cardContent" href="' + href + '">';
@@ -135,10 +135,10 @@
         // cardScalable
         html += "</div>";
 
-        html += '<div class="cardFooter">';
+        html += '<div class="cardFooter visualCardBox-cardFooter">';
 
         html += '<div style="text-align:right; float:right;padding:0;">';
-        html += '<button type="button" is="paper-icon-button-light" class="btnUserMenu autoSize"><i class="md-icon">' + AppInfo.moreIcon.replace('-', '_') + '</i></button>';
+        html += '<button type="button" is="paper-icon-button-light" class="btnUserMenu autoSize"><i class="md-icon">more_vert</i></button>';
         html += "</div>";
 
         html += '<div class="cardText" style="padding-top:10px;padding-bottom:10px;">';
@@ -230,14 +230,14 @@
 
         var html = '';
 
-        var cssClass = "card squareCard bottomPaddedCard";
+        var cssClass = "card squareCard";
 
         html += "<div data-id='" + user.Id + "' class='" + cssClass + "'>";
 
-        html += '<div class="cardBox visualCardBox">';
-        html += '<div class="cardScalable">';
+        html += '<div class="cardBox cardBox-bottompadded visualCardBox">';
+        html += '<div class="cardScalable visualCardBox-cardScalable">';
 
-        html += '<div class="cardPadder"></div>';
+        html += '<div class="cardPadder cardPadder-square"></div>';
 
         var href = "#";
         html += '<a class="cardContent" href="' + href + '">';
@@ -254,10 +254,10 @@
         // cardScalable
         html += "</div>";
 
-        html += '<div class="cardFooter">';
+        html += '<div class="cardFooter visualCardBox-cardFooter">';
 
         html += '<div class="cardText" style="text-align:right; float:right;padding:0;">';
-        html += '<button type="button" is="paper-icon-button-light" class="btnUserMenu"><iron-icon icon="' + AppInfo.moreIcon + '"></iron-icon></button>';
+        html += '<button type="button" is="paper-icon-button-light" class="btnUserMenu"><i class="md-icon">more_vert</i></button>';
         html += "</div>";
 
         html += '<div class="cardText" style="padding-top:10px;padding-bottom:10px;">';

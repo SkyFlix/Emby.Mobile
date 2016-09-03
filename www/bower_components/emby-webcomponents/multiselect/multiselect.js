@@ -176,23 +176,22 @@
 
         return new Promise(function (resolve, reject) {
 
-            var msg = globalize.translate('ConfirmDeleteItem');
-            var title = globalize.translate('HeaderDeleteItem');
+            var msg = globalize.translate('sharedcomponents#ConfirmDeleteItem');
+            var title = globalize.translate('sharedcomponents#HeaderDeleteItem');
 
             if (itemIds.length > 1) {
-                msg = globalize.translate('ConfirmDeleteItems');
-                title = globalize.translate('HeaderDeleteItems');
+                msg = globalize.translate('sharedcomponents#ConfirmDeleteItems');
+                title = globalize.translate('sharedcomponents#HeaderDeleteItems');
             }
 
             require(['confirm'], function (confirm) {
 
                 confirm(msg, title).then(function () {
-
                     var promises = itemIds.map(function (itemId) {
                         apiClient.deleteItem(itemId);
                     });
 
-                    resolve();
+                    Promise.all(promises).then(resolve);
                 }, reject);
 
             });
@@ -241,6 +240,13 @@
                 ironIcon: 'call-merge'
             });
 
+            if (user.Policy.EnableSync && appHost.supports('sync')) {
+                menuItems.push({
+                    name: globalize.translate('sharedcomponents#MakeAvailableOffline'),
+                    id: 'synclocal'
+                });
+            }
+
             menuItems.push({
                 name: globalize.translate('sharedcomponents#MarkPlayed'),
                 id: 'markplayed'
@@ -253,16 +259,16 @@
 
             menuItems.push({
                 name: globalize.translate('sharedcomponents#Refresh'),
-                id: 'refresh',
-                ironIcon: 'refresh'
+                id: 'refresh'
             });
 
-            menuItems.push({
-                name: globalize.translate('sharedcomponents#Sync'),
-                id: 'sync',
-                ironIcon: 'sync'
-            });
-            dispatchNeedsRefresh();
+            if (user.Policy.EnableSync) {
+                menuItems.push({
+                    name: globalize.translate('sharedcomponents#SyncToOtherDevice'),
+                    id: 'sync'
+                });
+            }
+
             require(['actionsheet'], function (actionsheet) {
 
                 actionsheet.show({
@@ -284,6 +290,7 @@
                                     });
                                 });
                                 hideSelections();
+                                dispatchNeedsRefresh();
                                 break;
                             case 'playlist':
                                 require(['playlistEditor'], function (playlistEditor) {
@@ -293,12 +300,14 @@
                                     });
                                 });
                                 hideSelections();
+                                dispatchNeedsRefresh();
                                 break;
                             case 'delete':
-                                deleteItems(items).then(function () {
+                                deleteItems(apiClient, items).then(function () {
                                     embyRouter.goHome();
                                 });
                                 hideSelections();
+                                dispatchNeedsRefresh();
                                 break;
                             case 'groupvideos':
                                 combineVersions(apiClient, items);
@@ -308,12 +317,14 @@
                                     apiClient.markPlayed(apiClient.getCurrentUserId(), itemId);
                                 });
                                 hideSelections();
+                                dispatchNeedsRefresh();
                                 break;
                             case 'markunplayed':
                                 items.forEach(function (itemId) {
                                     apiClient.markUnplayed(apiClient.getCurrentUserId(), itemId);
                                 });
                                 hideSelections();
+                                dispatchNeedsRefresh();
                                 break;
                             case 'refresh':
                                 require(['refreshDialog'], function (refreshDialog) {
@@ -323,6 +334,7 @@
                                     }).show();
                                 });
                                 hideSelections();
+                                dispatchNeedsRefresh();
                                 break;
                             case 'sync':
                                 require(['syncDialog'], function (syncDialog) {
@@ -331,10 +343,27 @@
                                             return {
                                                 Id: i
                                             };
-                                        })
+                                        }),
+                                        serverId: serverId
                                     });
                                 });
                                 hideSelections();
+                                dispatchNeedsRefresh();
+                                break;
+                            case 'synclocal':
+                                require(['syncDialog'], function (syncDialog) {
+                                    syncDialog.showMenu({
+                                        items: items.map(function (i) {
+                                            return {
+                                                Id: i
+                                            };
+                                        }),
+                                        isLocalSync: true,
+                                        serverId: serverId
+                                    });
+                                });
+                                hideSelections();
+                                dispatchNeedsRefresh();
                                 break;
                             default:
                                 break;

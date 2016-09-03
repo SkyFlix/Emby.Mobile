@@ -1,5 +1,5 @@
-define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo', 'focusManager', 'indicators', 'globalize', 'layoutManager', 'apphost', 'emby-button', 'css!./card', 'paper-icon-button-light', 'clearButtonStyle'],
-    function (datetime, imageLoader, connectionManager, itemHelper, mediaInfo, focusManager, indicators, globalize, layoutManager, appHost) {
+define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo', 'focusManager', 'indicators', 'globalize', 'layoutManager', 'apphost', 'dom', 'emby-button', 'css!./card', 'paper-icon-button-light', 'clearButtonStyle'],
+    function (datetime, imageLoader, connectionManager, itemHelper, mediaInfo, focusManager, indicators, globalize, layoutManager, appHost, dom) {
 
         // Regular Expressions for parsing tags and attributes
         var SURROGATE_PAIR_REGEXP = /[\uD800-\uDBFF][\uDC00-\uDFFF]/g,
@@ -118,7 +118,7 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
 
         function getImageWidth(shape) {
 
-            var screenWidth = window.innerWidth;
+            var screenWidth = dom.getWindowSize().innerWidth;
 
             if (isResizable(screenWidth)) {
                 var roundScreenTo = 100;
@@ -618,7 +618,7 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
                     tag: item.ImageTags.Thumb
                 });
 
-            } else if (item.SeriesThumbImageTag) {
+            } else if (item.SeriesThumbImageTag && options.inheritThumb !== false) {
 
                 imgUrl = apiClient.getScaledImageUrl(item.SeriesId, {
                     type: "Thumb",
@@ -626,9 +626,9 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
                     tag: item.SeriesThumbImageTag
                 });
 
-            } else if (item.ParentThumbItemId) {
+            } else if (item.ParentThumbItemId && options.inheritThumb !== false) {
 
-                imgUrl = apiClient.getThumbImageUrl(item.ParentThumbItemId, {
+                imgUrl = apiClient.getScaledImageUrl(item.ParentThumbItemId, {
                     type: "Thumb",
                     maxWidth: width,
                     tag: item.ParentThumbImageTag
@@ -702,11 +702,11 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
             return html;
         }
 
-        function getCardFooterText(item, options, showTitle, imgUrl, footerClass, progressHtml, isOuterFooter) {
+        function getCardFooterText(item, options, showTitle, forceName, overlayText, imgUrl, footerClass, progressHtml, isOuterFooter) {
 
             var html = '';
 
-            var showOtherText = isOuterFooter ? !options.overlayText : options.overlayText;
+            var showOtherText = isOuterFooter ? !overlayText : overlayText;
 
             if (isOuterFooter && options.cardLayout && !layoutManager.tv) {
                 var moreIcon = appHost.moreIcon == 'dots-horiz' ? '&#xE5D3;' : '&#xE5D4;';
@@ -719,7 +719,7 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
 
             if (showOtherText) {
                 var parentTitleUnderneath = item.Type == 'MusicAlbum' || item.Type == 'Audio' || item.Type == 'MusicVideo';
-                if (options.showParentTitle && !parentTitleUnderneath) {
+                if ((options.showParentTitle || options.showParentTitleOrTitle) && !parentTitleUnderneath) {
 
                     if (isOuterFooter && item.Type == 'Episode' && item.SeriesName && item.SeriesId) {
 
@@ -732,12 +732,16 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
                     }
                     else {
 
-                        lines.push(item.EpisodeTitle ? item.Name : (item.SeriesName || item.Album || item.AlbumArtist || item.GameSystem || ""));
+                        var parentTitle = item.EpisodeTitle ? item.Name : (item.SeriesName || item.Album || item.AlbumArtist || item.GameSystem || "");
+
+                        if (parentTitle || options.showParentTitle) {
+                            lines.push(parentTitle);
+                        }
                     }
                 }
             }
 
-            if (showTitle) {
+            if (showTitle || forceName || (options.showParentTitleOrTitle && !lines.length)) {
 
                 var name = options.showTitle == 'auto' && !item.IsFolder && item.MediaType == 'Photo' ? '' : itemHelper.getDisplayName(item);
 
@@ -834,7 +838,7 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
                     lines.push(airTimeText || '');
                 }
 
-                if (item.Type == 'TvChannel') {
+                if (options.showCurrentProgram && item.Type == 'TvChannel') {
 
                     if (item.CurrentProgram) {
                         lines.push(itemHelper.getDisplayName(item.CurrentProgram));
@@ -867,6 +871,10 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
 
                     lines.push(item.ChannelName || '&nbsp;');
                 }
+            }
+
+            if ((showTitle || !imgUrl) && forceName && overlayText && lines.length == 1) {
+                lines = [];
             }
 
             html += getCardTextLines(lines, cssClass, !options.overlayText, isOuterFooter);
@@ -1006,18 +1014,30 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
 
             var scalable = options.scalable !== false;
             if (scalable) {
-                className += " scalableCard";
+                className += " scalableCard " + options.shape + "Card-scalable";
             }
 
             var imgInfo = getCardImageUrl(item, apiClient, options);
             var imgUrl = imgInfo.imgUrl;
+
+            var forceName = imgInfo.forceName || !imgUrl;
+
+            var showTitle = options.showTitle == 'auto' ? true : (options.showTitle || item.Type == 'PhotoAlbum' || item.Type == 'Folder');
+            var overlayText = options.overlayText;
+
+            if (forceName && !options.cardLayout) {
+
+                if (overlayText == null) {
+                    overlayText = true;
+                }
+            }
 
             var cardImageContainerClass = 'cardImageContainer';
             if (options.coverImage || imgInfo.coverImage) {
                 cardImageContainerClass += ' coveredImage';
 
                 if (item.MediaType == 'Photo' || item.Type == 'PhotoAlbum' || item.Type == 'Folder') {
-                    cardImageContainerClass += ' noScale';
+                    cardImageContainerClass += ' coveredImage-noScale';
                 }
             }
 
@@ -1027,6 +1047,49 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
 
             var separateCardBox = scalable;
             var cardBoxClass = options.cardLayout ? 'cardBox visualCardBox' : 'cardBox';
+
+            if (!layoutManager.tv) {
+                cardBoxClass += ' cardBox-mobile';
+            } else {
+                cardBoxClass += ' cardBox-focustransform';
+            }
+
+            var footerCssClass;
+            var progressHtml = indicators.getProgressBarHtml(item);
+
+            var innerCardFooter = '';
+
+            var footerOverlayed = false;
+
+            if (overlayText) {
+
+                footerCssClass = progressHtml ? 'innerCardFooter fullInnerCardFooter' : 'innerCardFooter';
+                innerCardFooter += getCardFooterText(item, options, showTitle, forceName, overlayText, imgUrl, footerCssClass, progressHtml, false);
+                footerOverlayed = true;
+            }
+            else if (progressHtml) {
+                innerCardFooter += '<div class="innerCardFooter fullInnerCardFooter innerCardFooterClear">';
+                innerCardFooter += progressHtml;
+                innerCardFooter += '</div>';
+
+                progressHtml = '';
+            }
+
+            var mediaSourceCount = item.MediaSourceCount || 1;
+            if (mediaSourceCount > 1) {
+                innerCardFooter += '<div class="mediaSourceIndicator">' + mediaSourceCount + '</div>';
+            }
+
+            var outerCardFooter = '';
+            if (!overlayText && !footerOverlayed) {
+                footerCssClass = options.cardLayout ? 'cardFooter visualCardBox-cardFooter' : 'cardFooter transparent';
+                outerCardFooter = getCardFooterText(item, options, showTitle, forceName, overlayText, imgUrl, footerCssClass, progressHtml, true);
+            }
+
+            if (outerCardFooter && !options.cardLayout && options.allowBottomPadding !== false) {
+                cardBoxClass += ' cardBox-bottompadded';
+            }
+
             if (!separateCardBox) {
                 cardImageContainerClass += " " + cardBoxClass;
             }
@@ -1073,7 +1136,9 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
                     cardContentClose = '</button>';
                 }
                 cardImageContainerOpen = imgUrl ? ('<div class="' + cardImageContainerClass + ' lazy" data-src="' + imgUrl + '">') : ('<div class="' + cardImageContainerClass + '">');
-                cardImageContainerOpen = '<div class="' + cardBoxClass + '"><div class="cardScalable"><div class="cardPadder"></div>' + cardContentOpen + cardImageContainerOpen;
+
+                var cardScalableClass = options.cardLayout ? 'cardScalable visualCardBox-cardScalable' : 'cardScalable';
+                cardImageContainerOpen = '<div class="' + cardBoxClass + '"><div class="' + cardScalableClass + '"><div class="cardPadder-' + options.shape + '"></div>' + cardContentOpen + cardImageContainerOpen;
                 cardBoxClose = '</div>';
                 cardScalableClose = '</div>';
                 cardImageContainerClose = '</div>';
@@ -1110,54 +1175,9 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
                 cardImageContainerOpen += '<div class="cardIndicators ' + options.shape + 'CardIndicators">' + indicatorsHtml + '</div>';
             }
 
-            var forceName = imgInfo.forceName;
-
-            var showTitle = options.showTitle == 'auto' ? true : (options.showTitle || item.Type == 'PhotoAlbum' || item.Type == 'Folder');
-            var overlayText = options.overlayText;
-
-            if (forceName && !options.cardLayout) {
-                showTitle = imgUrl;
-
-                if (overlayText == null) {
-                    overlayText = true;
-                }
-            }
-
             if (!imgUrl) {
                 var defaultName = item.EpisodeTitle ? item.Name : itemHelper.getDisplayName(item);
                 cardImageContainerOpen += '<div class="cardText cardCenteredText">' + defaultName + '</div>';
-            }
-
-            var footerCssClass;
-            var progressHtml = indicators.getProgressBarHtml(item);
-
-            var innerCardFooter = '';
-
-            var footerOverlayed = false;
-
-            if (overlayText) {
-
-                footerCssClass = progressHtml ? 'innerCardFooter fullInnerCardFooter' : 'innerCardFooter';
-                innerCardFooter += getCardFooterText(item, options, showTitle, imgUrl, footerCssClass, progressHtml, false);
-                footerOverlayed = true;
-            }
-            else if (progressHtml) {
-                innerCardFooter += '<div class="innerCardFooter fullInnerCardFooter innerCardFooterClear">';
-                innerCardFooter += progressHtml;
-                innerCardFooter += '</div>';
-
-                progressHtml = '';
-            }
-
-            var mediaSourceCount = item.MediaSourceCount || 1;
-            if (mediaSourceCount > 1) {
-                innerCardFooter += '<div class="mediaSourceIndicator">' + mediaSourceCount + '</div>';
-            }
-
-            var outerCardFooter = '';
-            if (!overlayText && !footerOverlayed) {
-                footerCssClass = options.cardLayout ? 'cardFooter' : 'cardFooter transparent';
-                outerCardFooter = getCardFooterText(item, options, showTitle, imgUrl, footerCssClass, progressHtml, true);
             }
 
             var tagName = (layoutManager.tv || !scalable) && !overlayButtons ? 'button' : 'div';
@@ -1185,9 +1205,7 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
                 actionAttribute = '';
             }
 
-            if (outerCardFooter && !options.cardLayout) {
-                className += ' bottomPaddedCard';
-            }
+            className += ' card-withuserdata';
 
             var positionTicksData = item.UserData && item.UserData.PlaybackPositionTicks ? (' data-positionticks="' + item.UserData.PlaybackPositionTicks + '"') : '';
             var collectionIdData = options.collectionId ? (' data-collectionid="' + options.collectionId + '"') : '';
@@ -1195,9 +1213,10 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
             var mediaTypeData = item.MediaType ? (' data-mediatype="' + item.MediaType + '"') : '';
             var collectionTypeData = item.CollectionType ? (' data-collectiontype="' + item.CollectionType + '"') : '';
             var channelIdData = item.ChannelId ? (' data-channelid="' + item.ChannelId + '"') : '';
+            var contextData = options.context ? (' data-context="' + options.context + '"') : '';
 
             return '\
-<' + tagName + ' data-index="' + index + '"' + timerAttributes + actionAttribute + ' data-isfolder="' + (item.IsFolder || false) + '" data-serverid="' + (item.ServerId) + '" data-id="' + (item.Id || item.ItemId) + '" data-type="' + item.Type + '"' + mediaTypeData + collectionTypeData + channelIdData + positionTicksData + collectionIdData + playlistIdData + ' data-prefix="' + prefix + '" class="' + className + '"> \
+<' + tagName + ' data-index="' + index + '"' + timerAttributes + actionAttribute + ' data-isfolder="' + (item.IsFolder || false) + '" data-serverid="' + (item.ServerId) + '" data-id="' + (item.Id || item.ItemId) + '" data-type="' + item.Type + '"' + mediaTypeData + collectionTypeData + channelIdData + positionTicksData + collectionIdData + playlistIdData + contextData + ' data-prefix="' + prefix + '" class="' + className + '"> \
 ' + cardImageContainerOpen + innerCardFooter + cardImageContainerClose + cardContentClose + overlayButtons + cardScalableClose + outerCardFooter + cardBoxClose + '\
 </' + tagName + '>';
         }
@@ -1379,9 +1398,9 @@ define(['datetime', 'imageLoader', 'connectionManager', 'itemHelper', 'mediaInfo
             }
         }
 
-        function onUserDataChanged(userData) {
+        function onUserDataChanged(userData, scope) {
 
-            var cards = document.querySelectorAll('.card[data-id="' + userData.ItemId + '"]');
+            var cards = (scope || document.body).querySelectorAll('.card-withuserdata[data-id="' + userData.ItemId + '"]');
 
             for (var i = 0, length = cards.length; i < length; i++) {
                 updateUserData(cards[i], userData);

@@ -104,8 +104,6 @@ define(['loading', 'viewManager', 'skinManager', 'pluginManager', 'backdrop', 'b
         }
     }
 
-    var htmlCache = {};
-    var cacheParam = new Date().getTime();
     function loadContentUrl(ctx, next, route, request) {
 
         var url = route.contentPath || route.path;
@@ -125,32 +123,10 @@ define(['loading', 'viewManager', 'skinManager', 'pluginManager', 'backdrop', 'b
             url += '?' + ctx.querystring;
         }
 
-        if (route.enableCache !== false) {
-            var cachedHtml = htmlCache[url];
-            if (cachedHtml) {
-                loadContent(ctx, route, cachedHtml, request);
-                return;
-            }
-        }
+        require(['text!' + url], function (html) {
 
-        url += url.indexOf('?') == -1 ? '?' : '&';
-        url += 'v=' + cacheParam;
-
-        var xhr = new XMLHttpRequest();
-        xhr.onload = xhr.onerror = function () {
-            if (this.status < 400) {
-                var html = this.response;
-                if (route.enableCache !== false) {
-                    htmlCache[url.split('?')[0]] = html;
-                }
-                loadContent(ctx, route, html, request);
-            } else {
-                next();
-            }
-        };
-        xhr.onerror = next;
-        xhr.open('GET', url, true);
-        xhr.send();
+            loadContent(ctx, route, html, request);
+        });
     }
 
     function handleRoute(ctx, next, route) {
@@ -227,7 +203,7 @@ define(['loading', 'viewManager', 'skinManager', 'pluginManager', 'backdrop', 'b
             return;
             //}
         }
-        viewManager.tryRestoreView(currentRequest).then(function () {
+        viewManager.tryRestoreView(currentRequest, function () {
 
             // done
             currentRouteInfo = {
@@ -235,7 +211,12 @@ define(['loading', 'viewManager', 'skinManager', 'pluginManager', 'backdrop', 'b
                 path: ctx.path
             };
 
-        }, onNewViewNeeded);
+        }).catch(function (result) {
+
+            if (!result || !result.cancelled) {
+                onNewViewNeeded();
+            }
+        });
     }
 
     var firstConnectionResult;
@@ -371,6 +352,11 @@ define(['loading', 'viewManager', 'skinManager', 'pluginManager', 'backdrop', 'b
     var isDummyBackToHome;
 
     function handleBackToDefault() {
+
+        if (!appHost.supports('exitmenu') && appHost.supports('exit')) {
+            appHost.exit();
+            return;
+        }
 
         isDummyBackToHome = true;
         skinManager.loadUserSkin();
@@ -517,17 +503,21 @@ define(['loading', 'viewManager', 'skinManager', 'pluginManager', 'backdrop', 'b
         return show(pluginManager.mapRoute(skin, homeRoute));
     }
 
-    function showItem(item, serverId) {
+    function showItem(item, serverId, options) {
 
         if (typeof (item) === 'string') {
             require(['connectionManager'], function (connectionManager) {
                 var apiClient = serverId ? connectionManager.getApiClient(serverId) : connectionManager.currentApiClient();
                 apiClient.getItem(apiClient.getCurrentUserId(), item).then(function (item) {
-                    embyRouter.showItem(item);
+                    embyRouter.showItem(item, options);
                 });
             });
         } else {
-            skinManager.getCurrentSkin().showItem(item);
+
+            if (arguments.length == 2) {
+                options = arguments[1];
+            }
+            skinManager.getCurrentSkin().showItem(item, options);
         }
     }
 
@@ -557,18 +547,33 @@ define(['loading', 'viewManager', 'skinManager', 'pluginManager', 'backdrop', 'b
         return allRoutes;
     }
 
+    var backdropContainer;
+    var backgroundContainer;
     function setTransparency(level) {
+
+        if (!backdropContainer) {
+            backdropContainer = document.querySelector('.backdropContainer');
+        }
+        if (!backgroundContainer) {
+            backgroundContainer = document.querySelector('.backgroundContainer');
+        }
 
         if (level == 'full' || level == Emby.TransparencyLevel.Full) {
             backdrop.clear(true);
             document.documentElement.classList.add('transparentDocument');
+            backgroundContainer.classList.add('backgroundContainer-transparent');
+            backdropContainer.classList.add('hide');
         }
         else if (level == 'backdrop' || level == Emby.TransparencyLevel.Backdrop) {
             backdrop.externalBackdrop(true);
             document.documentElement.classList.add('transparentDocument');
+            backgroundContainer.classList.add('backgroundContainer-transparent');
+            backdropContainer.classList.add('hide');
         } else {
             backdrop.externalBackdrop(false);
             document.documentElement.classList.remove('transparentDocument');
+            backgroundContainer.classList.remove('backgroundContainer-transparent');
+            backdropContainer.classList.remove('hide');
         }
     }
 

@@ -1,4 +1,4 @@
-﻿define(['jQuery', 'apphost', 'cardStyle'], function ($, appHost) {
+﻿define(['jQuery', 'apphost', 'scripts/taskbutton', 'cardStyle'], function ($, appHost, taskButton) {
 
     function changeCollectionType(page, virtualFolder) {
 
@@ -16,7 +16,9 @@
 
             new medialibrarycreator().show({
 
-                collectionTypeOptions: getCollectionTypeOptions(),
+                collectionTypeOptions: getCollectionTypeOptions().filter(function (f) {
+                    return !f.hidden;
+                }),
                 refresh: shouldRefreshLibraryAfterChanges(page)
 
             }).then(function (hasChanges) {
@@ -225,10 +227,13 @@
 
     function editImages(page, virtualFolder) {
 
-        require(['components/imageeditor/imageeditor'], function (ImageEditor) {
+        require(['imageEditor'], function (imageEditor) {
 
-            ImageEditor.show(virtualFolder.ItemId, {
-                theme: 'a'
+            imageEditor.show({
+                
+                itemId: virtualFolder.ItemId,
+                serverId: ApiClient.serverId()
+
             }).then(function () {
                 reloadLibrary(page);
             });
@@ -245,7 +250,7 @@
             { name: Globalize.translate('FolderTypeTvShows'), value: "tvshows" },
             { name: Globalize.translate('FolderTypeBooks'), value: "books", message: Globalize.translate('MessageBookPluginRequired') },
             { name: Globalize.translate('FolderTypeGames'), value: "games", message: Globalize.translate('MessageGamePluginRequired') },
-            { name: Globalize.translate('FolderTypeHomeVideos'), value: "homevideos" },
+            { name: Globalize.translate('OptionHomeVideos'), value: "homevideos" },
             { name: Globalize.translate('FolderTypeMusicVideos'), value: "musicvideos" },
             { name: Globalize.translate('FolderTypePhotos'), value: "photos" },
             { name: Globalize.translate('FolderTypeUnset'), value: "mixed", message: Globalize.translate('MessageUnsetContentHelp') }
@@ -295,12 +300,12 @@
             style += "min-width:33.3%;";
         }
 
-        html += '<div class="card backdropCard scalableCard" style="' + style + '" data-index="' + index + '">';
+        html += '<div class="card backdropCard scalableCard backdropCard-scalable" style="' + style + '" data-index="' + index + '">';
 
         html += '<div class="cardBox visualCardBox">';
-        html += '<div class="cardScalable">';
+        html += '<div class="cardScalable visualCardBox-cardScalable">';
 
-        html += '<div class="cardPadder"></div>';
+        html += '<div class="cardPadder cardPadder-backdrop"></div>';
 
         html += '<div class="cardContent">';
         var imgUrl = '';
@@ -340,7 +345,7 @@
         // cardScalable
         html += "</div>";
 
-        html += '<div class="cardFooter">';
+        html += '<div class="cardFooter visualCardBox-cardFooter">';
 
         if (virtualFolder.showMenu !== false) {
             var moreIcon = appHost.moreIcon == 'dots-horiz' ? '&#xE5D3;' : '&#xE5D4;';
@@ -406,33 +411,6 @@
         return html;
     }
 
-    pageClassOn('pageinit', "mediaLibraryPage", function () {
-
-        var page = this;
-        $('#selectCollectionType', page).on('change', function () {
-
-            var index = this.selectedIndex;
-            if (index != -1) {
-
-                var name = this.options[index].innerHTML
-                    .replace('*', '')
-                    .replace('&amp;', '&');
-
-                var value = this.value;
-
-                $('#txtValue', page).val(name);
-
-                var folderOption = getCollectionTypeOptions().filter(function (i) {
-
-                    return i.value == value;
-
-                })[0];
-
-                $('.collectionTypeFieldDescription', page).html(folderOption.message || '');
-            }
-        });
-    });
-
     window.WizardLibraryPage = {
 
         next: function () {
@@ -486,10 +464,11 @@
         var page = this;
 
         // on here
-        $('.btnRefresh', page).taskButton({
+        taskButton({
             mode: 'on',
             progressElem: page.querySelector('.refreshProgress'),
-            taskKey: 'RefreshLibrary'
+            taskKey: 'RefreshLibrary',
+            button: page.querySelector('.btnRefresh')
         });
 
     });
@@ -499,8 +478,11 @@
         var page = this;
 
         // off here
-        $('.btnRefresh', page).taskButton({
-            mode: 'off'
+        taskButton({
+            mode: 'off',
+            progressElem: page.querySelector('.refreshProgress'),
+            taskKey: 'RefreshLibrary',
+            button: page.querySelector('.btnRefresh')
         });
 
     });

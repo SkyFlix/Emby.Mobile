@@ -113,7 +113,7 @@
     EmbySelectPrototype.createdCallback = function () {
 
         var parent = this.parentNode;
-        if (!parent.classList.contains('selectContainer')) {
+        if (parent && !parent.classList.contains('selectContainer')) {
             var div = this.ownerDocument.createElement('div');
             div.classList.add('selectContainer');
             parent.replaceChild(div, this);
@@ -167,6 +167,13 @@
         arrow.classList.add('selectArrow');
         arrow.innerHTML = '&#xE313;';
         arrowContainer.appendChild(arrow);
+    };
+
+    EmbySelectPrototype.setLabel = function (text) {
+
+        var label = this.parentNode.querySelector('label');
+
+        label.innerHTML = text;
     };
 
     document.registerElement('emby-select', {

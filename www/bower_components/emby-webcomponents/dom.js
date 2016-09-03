@@ -70,11 +70,35 @@ define([], function () {
         target.removeEventListener(type, handler, optionsOrCapture);
     }
 
+    var windowSize;
+    var windowSizeEventsBound;
+    function clearWindowSize() {
+        windowSize = null;
+    }
+
+    function getWindowSize() {
+        if (!windowSize) {
+            windowSize = {
+                innerHeight: window.innerHeight,
+                innerWidth: window.innerWidth
+            };
+
+            if (!windowSizeEventsBound) {
+                windowSizeEventsBound = true;
+                addEventListenerWithOptions(window, "orientationchange", clearWindowSize, { passive: true });
+                addEventListenerWithOptions(window, 'resize', clearWindowSize, { passive: true });
+            }
+        }
+
+        return windowSize;
+    }
+
     return {
         parentWithAttribute: parentWithAttribute,
         parentWithClass: parentWithClass,
         parentWithTag: parentWithTag,
         addEventListener: addEventListenerWithOptions,
-        removeEventListener: removeEventListenerWithOptions
+        removeEventListener: removeEventListenerWithOptions,
+        getWindowSize: getWindowSize
     };
 });
